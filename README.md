@@ -1,727 +1,608 @@
-## 🔁 **Git Commands – Differences Table**
+I cross-checked your current material against the official Git documentation and your uploaded notes. The overall syllabus is strong, but I’d make two important refinements: describe **rebase as replaying/reapplying commits onto a new base**, not simply “moving commits,” because it normally creates new commit objects; and describe **reset as moving a ref/HEAD and optionally changing the index and working tree**, rather than just “deleting commits.” ([Git][1]) Your notes already have the right production-oriented distinction between reset, revert, and restore. 
 
-| **Command**  | **Purpose**                 | **Works On**         | **Key Difference / When to Use**        |
-| ------------ | --------------------------- | -------------------- | --------------------------------------- |
-| `git clone`  | Copy a remote repository    | Remote → Local       | Creates a new local repo with history   |
-| `git init`   | Initialize empty repository | Local                | Used when starting from scratch         |
-| `git status` | Show repo status            | Working tree         | Shows modified, staged, untracked files |
-| `git add`    | Stage files                 | Working → Staging    | Prepares files for commit               |
-| `git commit` | Save snapshot               | Staging → Local repo | Creates a commit with message           |
-| `git push`   | Upload commits              | Local → Remote       | Shares changes with team                |
-| `git pull`   | Fetch + merge               | Remote → Local       | Updates local branch                    |
-| `git fetch`  | Download changes only       | Remote → Local       | Does **not** merge automatically        |
-| `git merge`  | Combine branches            | Branch → Branch      | Preserves commit history                |
-| `git rebase` | Reapply commits             | Branch → Branch      | Creates linear history                  |
+# Git Advanced — Final Training Structure
 
----
+## 1. Overall Git Architecture
 
-## 🌿 **Branching Commands**
-
-| **Command**           | **Purpose**          | **Key Difference**     |
-| --------------------- | -------------------- | ---------------------- |
-| `git branch`          | List/create branches | Does not switch branch |
-| `git checkout branch` | Switch branch        | Older method           |
-| `git switch branch`   | Switch branch        | Safer & newer          |
-| `git checkout -b dev` | Create + switch      | One-step operation     |
-| `git switch -c dev`   | Create + switch      | Modern alternative     |
-
----
-
-## 🔄 **Undo & Fix Commands**
-
-| **Command**                | **Use Case**             | **Effect**             |
-| -------------------------- | ------------------------ | ---------------------- |
-| `git restore file`         | Discard local changes    | Working directory only |
-| `git reset file`           | Unstage file             | Staging → Working      |
-| `git reset --soft HEAD~1`  | Undo commit              | Keeps changes staged   |
-| `git reset --mixed HEAD~1` | Undo commit              | Keeps changes unstaged |
-| `git reset --hard HEAD~1`  | Remove commit completely | ⚠️ Deletes changes     |
-| `git revert <commit>`      | Undo safely              | Creates new commit     |
-
----
-
-## 🔍 **Logs & History**
-
-| **Command**         | **Purpose**      | **Best Use Case**  |
-| ------------------- | ---------------- | ------------------ |
-| `git log`           | Full history     | Deep inspection    |
-| `git log --oneline` | Short history    | Quick view         |
-| `git show`          | Commit details   | Inspect one commit |
-| `git diff`          | File differences | Before commit      |
-| `git blame file`    | Who changed what | Debugging          |
-
----
-
-## 🧹 **Cleanup Commands**
-
-| **Command**     | **Purpose**            | **Notes**            |
-| --------------- | ---------------------- | -------------------- |
-| `git clean -n`  | Preview delete         | Safe check           |
-| `git clean -f`  | Delete untracked files | ⚠️ Permanent         |
-| `git rm file`   | Delete tracked file    | Staged automatically |
-| `git stash`     | Save work temporarily  | Useful before pull   |
-| `git stash pop` | Restore stashed work   | Removes stash        |
-
----
-
-## 🔐 **Remote Commands**
-
-| **Command**                 | **Purpose**  | **Notes**              |
-| --------------------------- | ------------ | ---------------------- |
-| `git remote -v`             | Show remotes | Verify URLs            |
-| `git remote add origin url` | Add remote   | First-time setup       |
-| `git push -u origin main`   | Set upstream | Simplifies future push |
-
----
-
-## 💡 **Interview Tip**
-
-> **Use `git revert` for shared branches, `git reset` for local mistakes**
-> **Use `git fetch` before risky merges**
-
-
-# 📑 **Git Advanced Commands — Complete Practice Guide (Mini-Lab)**
-
-> 🎯 **Goal**
-> Master **stash, rebase, cherry-pick, reset, reflog, tags, clean, blame, diff, bisect, squash merge**
-> — exactly how **senior DevOps engineers use Git daily**.
-
----
-
-## 🧠 Git Advanced Architecture Refresher
-
-![Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2AXurNAi3h2jpD67Pq2OgmrQ%402x.png)
-
-![Image](https://wac-cdn.atlassian.com/dam/jcr%3A4e576671-1b7f-43db-afb5-cf8db8df8e4a/01%20What%20is%20git%20rebase.svg?cdnVersion=3145)
-
-![Image](https://i0.wp.com/css-tricks.com/wp-content/uploads/2021/11/pasted-image-0-8.png?resize=1600%2C554\&ssl=1)
-
-### 🔁 Conceptual Flow
-
-```
-Working Directory
-   ↓ (git add)
-Staging Area
-   ↓ (git commit)
-Local Repository
-   ↓ (push)
-Remote Repository
+```text
+                           DEVELOPER
+                               │
+                               ▼
+                     ┌───────────────────┐
+                     │ Working Directory │
+                     └─────────┬─────────┘
+                               │ git add
+                               ▼
+                     ┌───────────────────┐
+                     │   Staging Area    │
+                     │      (Index)      │
+                     └─────────┬─────────┘
+                               │ git commit
+                               ▼
+                     ┌───────────────────┐
+                     │ Local Repository  │
+                     └─────────┬─────────┘
+                               │ git push
+                               ▼
+                     ┌───────────────────┐
+                     │ Remote Repository │
+                     │ GitHub / GitLab / │
+                     │   Azure DevOps    │
+                     └───────────────────┘
 ```
 
-Advanced commands **manipulate history**, not just files.
+This should be the starting diagram because `restore`, `reset`, `stash`, branching, and commits make much more sense once learners understand these three local states.
 
 ---
 
-# 📦 LAB SETUP — Create Practice Repository
+# 2. Git Branches
 
-### 🎯 Objective
+**Definition:** A branch is a named reference to a commit that provides an independent line of development.
 
-Create a **safe sandbox** to experiment without fear.
+**Use case:** Create isolated development areas for features, bug fixes, releases, and hotfixes.
+
+```text
+                        feature/login
+                             │
+                             C ─── D
+                            /
+A ─────── B ───────────────+
+│
+main
+```
+
+Typical real-world structure:
+
+```text
+main
+ │
+ ├──────── feature/login
+ │
+ ├──────── feature/payment
+ │
+ └──────── hotfix/payment-bug
+```
+
+Practice:
 
 ```bash
-mkdir git-advanced-practice
-cd git-advanced-practice
-git init
-```
-
-### Create base file
-
-```bash
-echo "Line 1" > file.txt
-git add file.txt
-git commit -m "Initial commit"
-```
-
-✅ **Outcome**
-
-* Repository initialized
-* One clean commit exists
-
----
-
-# 📌 1️⃣ Git Stash — Temporarily Save Uncommitted Changes
-
-### 💡 Why Git Stash?
-
-When:
-
-* You’re coding ✍️
-* Suddenly asked to fix prod 🔥
-* You **don’t want to commit half-done work**
-
----
-
-### 🧪 Step-by-Step Practice
-
-```bash
-echo "Temporary work" >> file.txt
-git status
-```
-
-📌 File is **modified but not committed**
-
----
-
-### Save work to stash
-
-```bash
-git stash
-```
-
-✔️ Working directory becomes clean
-
----
-
-### List stashes
-
-```bash
-git stash list
-```
-
----
-
-### Inspect stash
-
-```bash
-git stash show
-git stash show -p stash@{0}
-```
-
----
-
-### Restore stash
-
-```bash
-git stash apply
-# OR
-git stash pop
-```
-
-📌 `pop` = apply + delete
-📌 `apply` = apply only
-
----
-
-### Advanced Stash Commands (VERY IMPORTANT)
-
-```bash
-nano temp.txt
-git stash save "temp experiment"
-
-git stash -u      # include untracked files
-git stash -a      # include ignored files
-git stash clear   # delete all stashes
-```
-
----
-
-### Create a branch from stash (real-world lifesaver)
-
-```bash
-git stash branch feature-from-stash stash@{0}
-```
-
-🧠 **Use case**: Turn half-done work into a proper feature branch
-
----
-
-# 📌 2️⃣ Git Rebase — Rewrite History Cleanly
-
-![Image](https://wac-cdn.atlassian.com/dam/jcr%3A1896adb1-5d49-419a-9b50-3a36adac186c/09.svg?cdnVersion=3140)
-
-![Image](https://wac-cdn.atlassian.com/dam/jcr%3A4e576671-1b7f-43db-afb5-cf8db8df8e4a/01%20What%20is%20git%20rebase.svg?cdnVersion=3124)
-
-### 💡 Why Rebase?
-
-* Clean linear history
-* Avoid noisy merge commits
-* Mandatory before PR merge in many orgs
-
----
-
-### 🧪 Practice Scenario
-
-#### Create feature branch
-
-```bash
-git checkout -b feature
-echo "Feature line" >> file.txt
-git add file.txt
-git commit -m "Feature commit"
-```
-
----
-
-#### Update main branch
-
-```bash
-git checkout main
-echo "Main line" >> file.txt
-git add file.txt
-git commit -m "Main commit"
-```
-
----
-
-#### Rebase feature onto main
-
-```bash
-git checkout feature
-git rebase main
-```
-
-📌 Git reapplies feature commits **on top of main**
-
----
-
-### Verify history
-
-```bash
-git log --oneline --graph --all
-```
-
-✅ Linear, professional history
-
-⚠️ **Golden Rule**
-
-> ❌ Never rebase shared branches (`main`, `dev`)
-
----
-
-# 📌 3️⃣ Git Cherry-Pick — Copy a Specific Commit
-
-### 💡 Real DevOps Use Case
-
-* Hotfix applied in `dev`
-* Need **only that fix** in `main`
-
----
-
-```bash
-git log --oneline
-git cherry-pick <commit-hash>
-```
-
-✔️ Only selected commit is applied
-❌ No full branch merge
-
----
-
-# 📌 4️⃣ Git Reset & Reflog — Undo Mistakes Safely
-
-### 🧪 Create a test commit
-
-```bash
-echo "Test line" >> file.txt
-git add file.txt
-git commit -m "Test commit"
-```
-
----
-
-### Reset hard (dangerous)
-
-```bash
-git reset --hard HEAD~1
-```
-
-😱 Commit disappears from log
-
----
-
-### Recover using reflog
-
-```bash
-git reflog
-```
-
-```bash
-git checkout <commit-hash-from-reflog>
-```
-
-🧠 **Reflog = Git black box recorder**
-
----
-
-# 📌 5️⃣ Git Tag — Versioning & Releases
-
-### 💡 Why Tags?
-
-* Mark releases (`v1.0`, `v2.1`)
-* CI/CD uses tags for deployments
-
----
-
-```bash
-git tag v1.0
-git tag -a v1.1 -m "Version 1.1 Release"
-git tag
-```
-
-Push tags:
-
-```bash
-git push origin --tags
-```
-
----
-
-# 📌 6️⃣ Git Clean — Remove Junk Files
-
-### ⚠️ Dangerous but useful
-
-```bash
-touch temp.log
-git status
-```
-
-Dry run:
-
-```bash
-git clean -nd
-```
-
-Delete:
-
-```bash
-git clean -fd
-```
-
----
-
-# 📌 7️⃣ Git Blame — Who Changed This Line?
-
-```bash
-git blame file.txt
-```
-
-🧠 Used in:
-
-* Debugging
-* Audits
-* Incident analysis
-
----
-
-# 📌 8️⃣ Git Diff — Compare Branches
-
-```bash
-git diff main..feature
-```
-
-Shows:
-
-* Line-by-line differences
-* What will change after merge
-
----
-
-# 📌 9️⃣ Git Bisect — Find Bug-Introducing Commit
-
-![Image](https://edrawcloudpublicus.s3.amazonaws.com/work/1905656/2022-3-23/1647997801/main.png)
-
-![Image](https://belev.dev/static/3f8cc369ca0c0b0e8c8c1bb864becd34/a6c62/git-bisect.jpg)
-
-### 💡 Why Bisect?
-
-Binary search through commits
-➡️ Finds bug in **minutes instead of hours**
-
----
-
-```bash
-git bisect start
-git bisect bad
-git bisect good <known-good-commit>
-```
-
-Test each checkout:
-
-```bash
-git bisect good
-# or
-git bisect bad
-```
-
-Finish:
-
-```bash
-git bisect reset
-```
-
----
-
-# 📌 🔟 Squash Merge — Clean Production History
-
-### 💡 Use Case
-
-Multiple messy feature commits → **1 clean commit in main**
-
-```bash
-git checkout main
-git merge --squash feature
-git commit -m "Merged feature as one commit"
-```
-
----
-
-# 📊 Visualize Everything
-
-```bash
-git log --oneline --graph --all
-```
-
----
-
-# 📁 Final Directory Structure
-
-```
-git-advanced-practice/
-├── file.txt
-└── .git/
-```
-
----
-
-# 🧪 BONUS — Run Everything as a Script
-
-### `git-practice.sh`
-
-```bash
-#!/bin/bash
-
-mkdir git-advanced-practice
-cd git-advanced-practice || exit
-git init
-
-echo "Line 1" > file.txt
-git add file.txt
-git commit -m "Initial commit"
-
-echo "Temporary work" >> file.txt
-git stash
-git stash pop
-
-git checkout -b feature
-echo "Feature line" >> file.txt
-git add file.txt
-git commit -m "Feature commit"
-
-git checkout main
-echo "Main line" >> file.txt
-git add file.txt
-git commit -m "Main commit"
-
-git checkout feature
-git rebase main
-
-git log --oneline --graph --all
-```
-
-```bash
-chmod +x git-practice.sh
-./git-practice.sh
-```
-
----
-Below is a **production-focused Git command set**—the commands you actually rely on when working with **live repositories, CI/CD pipelines, hotfixes, and team workflows**.
-
----
-
-## 🔐 Repository Safety & Configuration (Production Basics)
-
-```bash
-git status
-git config --global user.name "Your Name"
-git config --global user.email "you@email.com"
-git config --global pull.rebase true
-git config --global core.autocrlf input
-```
-
-✅ Prevents accidental commits, merge chaos, and environment issues.
-
----
-
-## 🌱 Branching & Release Control (Very Important)
-
-```bash
-git branch
-git branch -a
-git checkout main
-git checkout -b feature/login
 git switch main
-git switch -c hotfix/payment-bug
-git branch -d feature/login
+
+git switch -c feature/login
+
+echo "Login Feature" > login.txt
+
+git add login.txt
+git commit -m "feat: add login feature"
+
+git log --oneline --graph --all --decorate
 ```
 
-**Production rule:**
-
-* `main / master` → production
-* `develop` → staging
-* `feature/*` → development
-* `hotfix/*` → urgent prod fixes
+Your existing notes correctly prefer `git switch` as the modern branch-switching command while retaining `checkout` for awareness. 
 
 ---
 
-## ⬇️ Syncing with Remote (Daily Production Use)
+# 3. Git Merge
+
+**Definition:** Merge integrates histories from branches. Depending on topology/options, it can fast-forward or create a merge commit.
+
+**Use case:** A tested feature needs to be integrated into `main` or another integration branch.
+
+### Before
+
+```text
+              C ─── D    feature/login
+             /
+A ─── B ─── E
+            │
+           main
+```
+
+### Merge commit case
+
+```text
+              C ─── D
+             /       \
+A ─── B ─── E ─────── M
+                       │
+                      main
+```
+
+Practice:
 
 ```bash
-git fetch origin
-git pull origin main
-git pull --rebase origin develop
+git switch main
+git merge feature/login
 ```
 
-✅ `fetch` first → inspect → then merge/rebase safely.
-
----
-
-## 📦 Commit Like a Professional
+Visualize:
 
 ```bash
-git add .
-git add file.txt
-git commit -m "fix: resolve null pointer in auth service"
-git commit --amend
+git log --oneline --graph --all --decorate
 ```
 
-**Best practice**
-
-* Use meaningful messages
-* Avoid multiple unrelated changes in one commit
+**Important:** Don't teach that every merge creates `M`; a fast-forward merge may simply advance the branch pointer.
 
 ---
 
-## 🔁 Merge & Rebase (Controlled Production Flow)
+# 4. Git Rebase
+
+**Definition:** Rebase reapplies a series of commits onto a different base. The replayed commits normally receive new commit IDs. ([Git][1])
+
+**Use case:** Bring your feature branch on top of the latest `main` while maintaining a linear history.
+
+### Before
+
+```text
+             C ─── D       feature
+            /
+A ─── B ─── E ─── F
+                │
+               main
+```
+
+Run from feature:
 
 ```bash
-git merge develop
-git merge --no-ff feature/login
-git rebase develop
-git rebase -i HEAD~3
+git switch feature
+git rebase main
 ```
 
-✔ `merge` → production/stable
-✔ `rebase` → clean feature history
+### After
 
----
+```text
+A ─── B ─── E ─── F ─── C' ─── D'
+                  │             │
+                 main         feature
+```
 
-## 🚀 Pushing Code (Production-Safe)
+The crucial concept is:
+
+```text
+C  → C'
+D  → D'
+
+same logical changes
+different commit identities
+```
+
+Git's documentation describes rebase as collecting the relevant commits and replaying them one-by-one on the new upstream, conceptually similar to cherry-picking each one. ([Git][1])
+
+### Rebase Conflict Flow
+
+```text
+git rebase main
+       │
+       ▼
+   Conflict?
+    /      \
+   No      Yes
+   │        │
+   ▼        ▼
+ Done   Edit files
+            │
+            ▼
+       git add <file>
+            │
+            ▼
+   git rebase --continue
+```
+
+Other controls:
 
 ```bash
-git push origin feature/login
-git push origin main
-git push --force-with-lease
+git rebase --continue
+git rebase --abort
+git rebase --skip
 ```
 
-⚠️ Never use `--force` on shared branches
-✔ `--force-with-lease` is safer
+These are the official conflict-control paths for a rebase. ([Git][2])
 
 ---
 
-## 🏷️ Versioning & Releases (Critical for Prod)
+# 5. Merge vs Rebase
+
+This is one of the most important comparison diagrams in the module.
+
+### Merge
+
+```text
+       C ─── D
+      /       \
+A ─── B ─── E ─── M
+```
+
+### Rebase
+
+```text
+A ─── B ─── E ─── C' ─── D'
+```
+
+| Feature                        | Merge                     | Rebase                                   |
+| ------------------------------ | ------------------------- | ---------------------------------------- |
+| Main goal                      | Integrate histories       | Replay commits on new base               |
+| History                        | Preserves branch topology | Usually linearizes history               |
+| Commit IDs rewritten           | Existing commits remain   | Replayed commits get new IDs             |
+| Merge commit                   | Possible                  | Usually no merge commit in simple rebase |
+| Shared history                 | Generally safer           | Avoid rewriting published/shared work    |
+| Feature branch synchronization | Good                      | Excellent for clean feature history      |
+
+Your source already frames merge as history-preserving and rebase as linear-history oriented. 
+
+---
+
+# 6. Git Cherry-Pick
+
+**Definition:** Cherry-pick applies the changes introduced by selected commit(s) onto the current branch, creating new commit(s).
+
+**Use case:** A hotfix exists on another branch, but you don't want the entire branch.
+
+```text
+                 C ─── D ─── E     develop
+                /
+A ─── B ───────+
+│
+main
+```
+
+Need only `D`:
 
 ```bash
-git tag
-git tag v1.0.0
-git tag -a v1.1.0 -m "production release"
-git push origin v1.1.0
-git push --tags
+git switch main
+git cherry-pick <D-commit-id>
 ```
 
-Used for:
+Result:
 
-* Rollbacks
-* Release tracking
-* CI/CD deployments
+```text
+                 C ─── D ─── E
+                /
+A ─── B ─────── D'
+               │
+              main
+```
+
+```text
+D  ──changes──► D'
+```
+
+This is particularly suitable for **targeted hotfix/backport scenarios**, which matches your existing material. 
 
 ---
 
-## 🔍 Investigation & Debugging (Prod Incidents)
+# 7. Conflict Resolution
+
+**Definition:** A conflict occurs when Git cannot safely combine competing changes automatically.
+
+### Typical Scenario
+
+```text
+                     config.txt
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+             main                feature
+              │                     │
+     Environment=Staging   Environment=Development
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                     CONFLICT
+                         │
+                         ▼
+                  Developer decides
+                         │
+                         ▼
+                      git add
+                         │
+                         ▼
+                 Continue / Commit
+```
+
+Typical markers:
+
+```text
+<<<<<<< HEAD
+Environment=Staging
+=======
+Environment=Development
+>>>>>>> feature/config
+```
+
+Resolve the file and stage it:
 
 ```bash
-git log --oneline --graph --all
-git log -p
-git blame app.py
-git diff
-git diff main..develop
+git add config.txt
 ```
 
-🔥 `git blame` is gold during outages.
-
----
-
-## ⏪ Rollback & Recovery (MOST IMPORTANT)
+For merge:
 
 ```bash
-git revert <commit-id>
-git reset --soft HEAD~1
-git reset --hard HEAD~1
-git checkout <commit-id>
+git commit
 ```
 
-### Safe Production Rule:
-
-✔ Use **`git revert`**
-❌ Avoid `reset --hard` on shared branches
-
----
-
-## 🧹 Clean & Maintenance
+For rebase:
 
 ```bash
-git stash
-git stash apply
-git stash drop
-git clean -fd
+git rebase --continue
 ```
-
-Useful before:
-
-* Hotfixes
-* Branch switches
-* Emergency debugging
 
 ---
 
-## 🔐 Production Git Workflow (Recommended)
+# 8. Git Stash
+
+**Definition:** Stash records working-directory/index changes temporarily so you can work from a cleaner state.
+
+**Real-world use case:** You're halfway through feature development when an urgent production issue arrives.
+
+```text
+Feature Development
+        │
+        │ unfinished
+        ▼
+Working Directory
+        │
+        │ git stash
+        ▼
+┌──────────────────┐
+│   Stash Stack    │
+│ stash@{0}        │
+│ stash@{1}        │
+└──────────────────┘
+        │
+        ▼
+Clean working state
+        │
+        ▼
+Work on Hotfix
+        │
+        ▼
+git stash pop
+        │
+        ▼
+Continue Feature
+```
+
+Practice:
 
 ```bash
-feature → develop → main → tag → deploy
+git stash push -m "login feature WIP"
+
+git stash list
+
+git stash show -p stash@{0}
+
+git stash pop
 ```
 
-Example:
+Your notes correctly distinguish `apply` from `pop`: `apply` reapplies without removing the stash entry, while successful `pop` applies and removes it. 
+
+---
+
+# 9. Git Reset
+
+**Definition:** Reset changes where the current branch/HEAD points and, depending on mode, also updates the index and working tree.
+
+### Starting State
+
+```text
+A ─── B ─── C
+            ▲
+            │
+       HEAD / main
+```
+
+Run:
 
 ```bash
-git checkout develop
-git merge feature/api
-git checkout main
-git merge develop
-git tag v2.0.1
-git push origin main --tags
+git reset HEAD~1
+```
+
+Conceptually:
+
+```text
+A ─── B ─── C
+      ▲
+      │
+ HEAD / main
+```
+
+The key difference is what happens to `C`'s changes.
+
+### Reset Modes
+
+```text
+                   git reset HEAD~1
+                           │
+          ┌────────────────┼────────────────┐
+          │                │                │
+          ▼                ▼                ▼
+        --soft          --mixed           --hard
+          │                │                │
+          ▼                ▼                ▼
+      Keep staged      Keep changes      Discard corresponding
+                         unstaged         tracked changes
+```
+
+| Mode      | HEAD moves | Index                   | Working tree     | Typical use         |
+| --------- | ---------: | ----------------------- | ---------------- | ------------------- |
+| `--soft`  |        Yes | Changes retained staged | Retained         | Rebuild a commit    |
+| `--mixed` |        Yes | Reset                   | Changes retained | Re-stage/rework     |
+| `--hard`  |        Yes | Reset                   | Reset            | Discard local state |
+
+Your notes correctly flag `reset --hard` as dangerous. 
+
+---
+
+# 10. Git Revert
+
+**Definition:** Revert records a new commit that reverses changes introduced by an earlier commit.
+
+**Use case:** A problematic commit has already reached a shared branch.
+
+### Before
+
+```text
+A ─── B ─── C
+            │
+         Bad change
+```
+
+### Revert
+
+```bash
+git revert <C-commit-id>
+```
+
+### After
+
+```text
+A ─── B ─── C ─── D
+            │     │
+           Bad   Revert C
+```
+
+Notice:
+
+```text
+C IS STILL IN HISTORY
+```
+
+That's why revert is normally the clearer choice for undoing changes on shared history. Your notes already emphasize the same production rule. 
+
+---
+
+# 11. Git Restore
+
+**Definition:** Restore changes file contents in the working tree and/or restores the index from another source; it does not move the branch pointer like reset.
+
+### Discard Working-Tree Change
+
+```text
+Repository / Index
+        │
+        │ git restore file.txt
+        ▼
+Working Directory
+```
+
+```bash
+git restore README.md
+```
+
+### Unstage
+
+```text
+             Staging Area
+                  │
+                  │ git restore --staged
+                  ▼
+        file no longer staged
+
+Working-tree modification remains
+```
+
+```bash
+git restore --staged README.md
 ```
 
 ---
 
-## 🧠 Commands Every DevOps Engineer MUST Know
+# 12. Reset vs Revert vs Restore
 
-| Scenario             | Command              |
-| -------------------- | -------------------- |
-| Rollback prod        | `git revert`         |
-| Check who broke code | `git blame`          |
-| Clean history        | `git rebase -i`      |
-| Safe force push      | `--force-with-lease` |
-| Emergency fix        | `hotfix/*` branch    |
-| Release deploy       | `git tag`            |
+This should be your **main rollback chart**.
+
+```text
+                         SOMETHING WENT WRONG
+                                  │
+                  ┌───────────────┼───────────────┐
+                  │               │               │
+             Local History    Shared History    File State
+                  │               │               │
+                  ▼               ▼               ▼
+                RESET           REVERT          RESTORE
+                  │               │               │
+             Move branch      New undo        Restore /
+              pointer          commit          unstage file
+```
+
+| Question                        | Reset                 | Revert         | Restore     |
+| ------------------------------- | --------------------- | -------------- | ----------- |
+| Operates mainly on              | Branch/HEAD + state   | Commit changes | Files/index |
+| Moves branch pointer            | Yes                   | No             | No          |
+| Creates new commit              | No                    | Yes            | No          |
+| Rewrites visible branch history | Can                   | No             | No          |
+| Good for local mistake          | **Yes**               | Possible       | File-level  |
+| Good for shared/pushed commit   | Usually avoid         | **Yes**        | No          |
+| Discard file modification       | Not the clearest tool | No             | **Yes**     |
+| Unstage file                    | Possible              | No             | **Yes**     |
 
 ---
 
+# 13. Complete Decision Flow
 
+```text
+                       WHAT DO YOU NEED?
+                              │
+        ┌─────────────────────┼──────────────────────┐
+        │                     │                      │
+  Develop separately?   Integrate changes?      Undo something?
+        │                     │                      │
+        ▼                     ▼                      ▼
+      BRANCH          ┌───────┼────────┐       Is it pushed/
+                      │       │        │        shared history?
+                    Whole   Clean    Single           │
+                    Branch  History  Commit       ┌───┴───┐
+                      │       │        │          │       │
+                    MERGE   REBASE  CHERRY-PICK  No      Yes
+                                                   │       │
+                                                   ▼       ▼
+                                                 RESET   REVERT
 
-## 🎯 What You’ve Achieved
+Unfinished work?
+      │
+      ▼
+    STASH
 
-✅ Real Git internals understanding
-✅ Senior-level commands practiced
-✅ CI/CD-ready Git workflows
-✅ Interview + production confidence
+Wrong file change / wrong staging?
+      │
+      ▼
+   RESTORE
+```
 
+# 14. Recommended Lab Flow
 
+For the current module, I would teach it in this order:
+
+```text
+1. Repository / Working Tree / Index
+                    ↓
+2. Branch
+                    ↓
+3. Merge
+                    ↓
+4. Rebase
+                    ↓
+5. Merge vs Rebase
+                    ↓
+6. Cherry-Pick
+                    ↓
+7. Conflict Resolution
+                    ↓
+8. Stash
+                    ↓
+9. Reset
+                    ↓
+10. Revert
+                    ↓
+11. Restore
+                    ↓
+12. Reset vs Revert vs Restore
+                    ↓
+13. Final Real-World Challenge
+```
+
+I would **not mix `reflog`, `bisect`, `blame`, tags, `clean`, interactive rebase, and squash merge into this session**. They are useful and are already present in your source material—for example, your notes cover reflog recovery, tags, clean, blame, bisect, and squash merge.    They fit better as **Git Advanced – Level 2**, while this module stays focused on **branching + integration + conflict handling + rollback/recovery**.
+
+[1]: https://git-scm.com/docs/git-rebase?utm_source=chatgpt.com "Git - git-rebase Documentation"
+[2]: https://git-scm.com/docs/git-rebase/2.53.0.html?utm_source=chatgpt.com "Git - git-rebase Documentation"
