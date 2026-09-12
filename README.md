@@ -1,5 +1,3 @@
-I cross-checked your current material against the official Git documentation and your uploaded notes. The overall syllabus is strong, but I’d make two important refinements: describe **rebase as replaying/reapplying commits onto a new base**, not simply “moving commits,” because it normally creates new commit objects; and describe **reset as moving a ref/HEAD and optionally changing the index and working tree**, rather than just “deleting commits.” ([Git][1]) Your notes already have the right production-oriented distinction between reset, revert, and restore. 
-
 # Git Advanced — Final Training Structure
 
 ## 1. Overall Git Architecture
