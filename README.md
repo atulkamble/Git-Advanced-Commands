@@ -1,4 +1,4 @@
-# Git Advanced — Final Training Structure
+# Git Advanced 
 
 ## 1. Overall Git Architecture
 
